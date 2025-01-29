@@ -19,7 +19,7 @@ def minkowski_distance(a, b, p=2):
         float: Minkowski distance between arrays a and b.
     """
 
-    # TODO
+    return np.sum(abs(a-b)**p)**(1/p)
 
 
 # k-Nearest Neighbors Model
