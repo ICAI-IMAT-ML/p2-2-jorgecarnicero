@@ -50,7 +50,11 @@ class knn:
             k (int, optional): Number of neighbors to use. Defaults to 5.
             p (int, optional): The degree of the Minkowski distance. Defaults to 2.
         """
-        # TODO
+        
+        self.x_train = X_train
+        self.y_train = y_train
+        self.k = k
+        self.p = p
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -88,7 +92,11 @@ class knn:
         Returns:
             np.ndarray: distance from point to each point in the training dataset.
         """
-        # TODO
+
+        array = np.array([minkowski_distance(train_point,point) for train_point in self.x_train])
+
+        return array
+    
 
     def get_k_nearest_neighbors(self, distances: np.ndarray) -> np.ndarray:
         """Get the k nearest neighbors indices given the distances matrix from a point.
