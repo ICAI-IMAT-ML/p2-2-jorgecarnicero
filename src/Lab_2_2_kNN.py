@@ -19,7 +19,7 @@ def minkowski_distance(a, b, p=2):
         float: Minkowski distance between arrays a and b.
     """
 
-    return (np.sum((abs(a-b))**p)**(1/p))
+    return np.sum((np.abs(a-b))**p)**(1/p)
 
 
 # k-Nearest Neighbors Model
@@ -50,11 +50,16 @@ class knn:
             k (int, optional): Number of neighbors to use. Defaults to 5.
             p (int, optional): The degree of the Minkowski distance. Defaults to 2.
         """
+        if k < 0:
+            print("K debe ser mayor que 0")
+        if p < 0:
+            print("p debe ser mayor que 0")
         
-        self.x_train = X_train
-        self.y_train = y_train
-        self.k = k
-        self.p = p
+        else:
+            self.x_train = X_train
+            self.y_train = y_train
+            self.k = k
+            self.p = p
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -110,7 +115,10 @@ class knn:
         Hint:
             You might want to check the np.argsort function.
         """
-        # TODO
+        k_neighbours_array_index = np.argpartition(distances, self.k)[:self.k] # Nos ordena el vector teniendo delante del indice k los indices relacionadosa los menores números, por eso luego accedemos a ellos [:k]
+
+        return k_neighbours_array_index
+         
 
     def most_common_label(self, knn_labels: np.ndarray) -> int:
         """Obtain the most common label from the labels of the k nearest neighbors
