@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 sns.set_theme()
 import numpy as np  
 import seaborn as sns
+import random
 
 
 def minkowski_distance(a, b, p=2):
@@ -51,9 +52,12 @@ class knn:
             p (int, optional): The degree of the Minkowski distance. Defaults to 2.
         """
         if k < 0:
-            print("K debe ser mayor que 0")
+            raise ValueError("k and p must be positive integers.")
         if p < 0:
-            print("p debe ser mayor que 0")
+            raise ValueError("k and p must be positive integers.")
+        
+        if len(X_train) != len(y_train):
+            raise ValueError("Length of X_train and y_train must be equal.")
         
         else:
             self.x_train = X_train
@@ -71,7 +75,16 @@ class knn:
         Returns:
             np.ndarray: Predicted class labels.
         """
-        # TODO
+        predicted_labels = []
+
+        for point in X:
+            distances = self.compute_distances(point)
+            neighbours_index = self.get_k_nearest_neighbors(distances)
+            neighbours = [self.y_train[indice_neigh] for indice_neigh in neighbours_index]
+            label = self.most_common_label(neighbours)
+            predicted_labels.append(label)
+
+        return np.array(predicted_labels)
 
     def predict_proba(self, X):
         """
@@ -86,7 +99,19 @@ class knn:
         Returns:
             np.ndarray: Predicted class probabilities.
         """
-        # TODO
+        probabilities = []
+        for point in X:
+            distances = self.compute_distances(point)
+            
+            neighbours_index = self.get_k_nearest_neighbors(distances)
+            neighbours = [self.y_train[indice_neigh] for indice_neigh in neighbours_index]
+
+            label = self.most_common_label(neighbours)
+            prob = neighbours.count(label) / len(neighbours)
+
+            probabilities.append([1-prob,prob])
+        
+        return np.array(probabilities)
 
     def compute_distances(self, point: np.ndarray) -> np.ndarray:
         """Compute distance from a point to every point in the training dataset
@@ -129,7 +154,16 @@ class knn:
         Returns:
             int: most common label
         """
-        # TODO
+        labels = {}
+        for label in knn_labels:
+            if label not in labels:
+                labels[label] = 1
+            else:
+                labels[label] += 1
+        maximo = max(labels.values())
+        for label in labels:
+            if labels[label] == maximo:
+                return label
 
     def __str__(self):
         """
@@ -229,27 +263,40 @@ def evaluate_classification_metrics(y_true, y_pred, positive_label):
         - Specificity: TN / (TN + FP)
         - F1 Score: 2 * (Precision * Recall) / (Precision + Recall)
     """
+    
     # Map string labels to 0 or 1
     y_true_mapped = np.array([1 if label == positive_label else 0 for label in y_true])
     y_pred_mapped = np.array([1 if label == positive_label else 0 for label in y_pred])
+    tn = 0
+    fp = 0
+    fn = 0
+    tp = 0
+    for true,pred in zip(y_true_mapped,y_pred_mapped):
+        if true == pred:
+            if true == 1:
+                tp += 1
+            else:
+                tn += 1
+        else:
+            if true == 1:
+                fn += 1
+            else:
+                fp += 1
 
-    # Confusion Matrix
-    # TODO
+    # Accuracy 
+    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) != 0 else 0
 
-    # Accuracy
-    # TODO
-
-    # Precision
-    # TODO
+    # Precision 
+    precision = tp / (tp + fp) if (tp + fp) != 0 else 0
 
     # Recall (Sensitivity)
-    # TODO
+    recall = tp / (tp + fn) if (tp + fn) != 0 else 0
 
     # Specificity
-    # TODO
+    specificity = tn / (tn + fp) if (tn + fp) != 0 else 0
 
     # F1 Score
-    # TODO
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
 
     return {
         "Confusion Matrix": [tn, fp, fn, tp],
@@ -345,5 +392,23 @@ def plot_roc_curve(y_true, y_probs, positive_label):
             - "tpr": Array of True Positive Rates for each threshold.
 
     """
-    # TODO
+
+    y_preds = []
+    for prob in y_probs:
+        if prob > 0.5:
+            y_preds.append(1)
+        elif prob < 0.5:
+            y_preds.append(0)
+        elif prob == 0.5:
+            y_preds.append(random.randint(0,1))
+
+    # PENSAR QUE ESTA EL Y_PROBS Y NO Y_PREDS
+    dictt = evaluate_classification_metrics(y_true,y_preds,positive_label)
+    
+    # SEGURAMENTE EL PROBLEMA ESTÉ AHI, NOS LO DAN DE LA POSITIVE, OSEA DE 1. QUE HACEMOS QUE SI ES MÁS DEL 50 % ENTONCES TENDRÍA QUE SER O ALGO ASÍ
+    confusion_matrix = dictt["Confusion Matrix"]
+    tn, fp, fn, tp = confusion_matrix[0],confusion_matrix[1],confusion_matrix[2],confusion_matrix[3]
+    fpr = fp / (fn + tn) if (fn + tn) != 0 else 0
+    tpr = tp / (tp + fn) if (tp + fn) != 0 else 0
+
     return {"fpr": np.array(fpr), "tpr": np.array(tpr)}
