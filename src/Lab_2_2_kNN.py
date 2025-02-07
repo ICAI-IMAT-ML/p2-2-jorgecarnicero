@@ -309,6 +309,7 @@ def evaluate_classification_metrics(y_true, y_pred, positive_label):
 
 
 
+
 def plot_calibration_curve(y_true, y_probs, positive_label, n_bins=10):
     """
     Plot a calibration curve to evaluate the accuracy of predicted probabilities.
@@ -320,21 +321,37 @@ def plot_calibration_curve(y_true, y_probs, positive_label, n_bins=10):
     Args:
         y_true (array-like): True labels of the data. Can be binary or categorical.
         y_probs (array-like): Predicted probabilities for the positive class (positive_label).
-                            Expected values are in the range [0, 1].
+                              Expected values are in the range [0, 1].
         positive_label (int or str): The label that is considered the positive class.
-                                    This is used to map categorical labels to binary outcomes.
+                                     This is used to map categorical labels to binary outcomes.
         n_bins (int, optional): Number of bins to use for grouping predicted probabilities.
                                 Defaults to 10. Bins are equally spaced in the range [0, 1].
 
     Returns:
         dict: A dictionary with the following keys:
             - "bin_centers": Array of the center values of each bin.
-            - "true_proportions": Array of the fraction of positives in each bin
-
+            - "true_proportions": Array of the fraction of positives in each bin.
     """
-    # TODO
-    return {"bin_centers": bin_centers, "true_proportions": true_proportions}
+    # Generamos los límites de los bins (n_bins + 1 puntos)
+    bins = np.linspace(0, 1, n_bins + 1)
+    # Calculamos el centro de cada bin (estos serán nuestros puntos para la gráfica)
+    bin_centers = (bins[:-1] + bins[1:]) / 2
+    true_proportions = []
 
+    # Para cada bin, calculamos la fracción de positivos.
+    for i in range(n_bins):
+        bin_anterior = bins[i]
+        bin_siguiente = bins[i+1]
+
+        # Seleccionamos los índices de las muestras cuya probabilidad cae en el bin actual.
+        indices = (y_probs >= bin_siguiente) & (y_probs < bin_anterior)
+
+        y_preds = [1 if t == positive_label else 0 for t in y_true[indices]]
+        fraction = np.sum(y_preds) / len(y_preds)
+        
+        true_proportions.append(fraction)
+
+    return {"bin_centers": np.array(bin_centers), "true_proportions": np.array(true_proportions)}
 
 
 def plot_probability_histograms(y_true, y_probs, positive_label, n_bins=10):
@@ -363,7 +380,8 @@ def plot_probability_histograms(y_true, y_probs, positive_label, n_bins=10):
 
     """
     # TODO
-
+    y_true_mapped = np.array([1 if label == positive_label else 0 for label in y_true])
+    
     return {
         "array_passed_to_histogram_of_positive_class": y_probs[y_true_mapped == 1],
         "array_passed_to_histogram_of_negative_class": y_probs[y_true_mapped == 0],
@@ -393,22 +411,18 @@ def plot_roc_curve(y_true, y_probs, positive_label):
 
     """
 
-    y_preds = []
-    for prob in y_probs:
-        if prob > 0.5:
-            y_preds.append(1)
-        elif prob < 0.5:
-            y_preds.append(0)
-        elif prob == 0.5:
-            y_preds.append(random.randint(0,1))
-
-    # PENSAR QUE ESTA EL Y_PROBS Y NO Y_PREDS
-    dictt = evaluate_classification_metrics(y_true,y_preds,positive_label)
+    prob_limit = np.linspace(0,1,11) # De 0 a 1 pillamos 11 puntos
     
-    # SEGURAMENTE EL PROBLEMA ESTÉ AHI, NOS LO DAN DE LA POSITIVE, OSEA DE 1. QUE HACEMOS QUE SI ES MÁS DEL 50 % ENTONCES TENDRÍA QUE SER O ALGO ASÍ
-    confusion_matrix = dictt["Confusion Matrix"]
-    tn, fp, fn, tp = confusion_matrix[0],confusion_matrix[1],confusion_matrix[2],confusion_matrix[3]
-    fpr = fp / (fn + tn) if (fn + tn) != 0 else 0
-    tpr = tp / (tp + fn) if (tp + fn) != 0 else 0
+    # Si nos fijamos en las diapos vemos que es una gráfica entonces por eso hay que pillar los puntos desde 0 a 1
+    fpr,tpr = [], []
+    for punto in prob_limit:
+        # Vamos viendo si la clasificariamos como 1 o 0
+        y_preds = [1 if prob >= punto else 0 for prob in y_probs]
 
+        # Con la función que ya hemos creado calculamos las métricas para poder calcular el tpr y el fpr
+        dictt = evaluate_classification_metrics(y_true,y_preds,positive_label)
+        
+        tpr.append(dictt["Recall"])
+        fpr.append(1 - dictt["Specificity"])
+    
     return {"fpr": np.array(fpr), "tpr": np.array(tpr)}
