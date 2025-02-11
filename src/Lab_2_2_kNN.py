@@ -106,7 +106,7 @@ class knn:
             neighbours_index = self.get_k_nearest_neighbors(distances)
             neighbours = [self.y_train[indice_neigh] for indice_neigh in neighbours_index]
 
-            label = self.most_common_label(neighbours)
+            label = 1
             prob = neighbours.count(label) / len(neighbours)
 
             probabilities.append([1-prob,prob])
@@ -355,7 +355,7 @@ def plot_calibration_curve(y_true, y_probs, positive_label, n_bins=10):
         true_proportions.append(fraction)
 
     plt.figure(figsize=(6, 6))
-    plt.plot(bin_centers, true_proportions, marker='o', label='Calibration Curve')
+    plt.plot(true_proportions, bin_centers, marker='o', label='Calibration Curve')
     plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Perfectly Calibrated')
     plt.show()
 
@@ -430,23 +430,30 @@ def plot_roc_curve(y_true, y_probs, positive_label):
 
     """
 
-    prob_limit = np.linspace(0,1,11) # De 0 a 1 pillamos 11 puntos
-    
-    # Si nos fijamos en las diapos vemos que es una gráfica entonces por eso hay que pillar los puntos desde 0 a 1
-    fpr,tpr = [], []
-    for punto in prob_limit:
-        # Vamos viendo si la clasificariamos como 1 o 0
-        y_preds = [1 if prob >= punto else 0 for prob in y_probs]
+    prob_limit = np.linspace(0, 1, 11)  # De 0 a 1 en 11 puntos
+    tpr = []  # True Positive Rate
+    fpr = []  # False Positive Rate
 
-        # Con la función que ya hemos creado calculamos las métricas para poder calcular el tpr y el fpr
-        dictt = evaluate_classification_metrics(y_true,y_preds,positive_label)
+    for punto in prob_limit:
+        # Clasificamos como 1 si la probabilidad predicha es mayor o igual al umbral
+        y_preds = (y_probs >= punto).astype(int)
         
-        tpr.append(dictt["Recall"])
-        fpr.append(1 - dictt["Specificity"])
-    
-    plt.figure(figsize=(6, 6))
-    plt.plot(fpr, tpr, marker='o', linestyle='-', color='blue', label='ROC Curve')
-    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Random Classifier')
-    plt.show()
+        # Calculamos las métricas (TPR y FPR)
+        dict_metrics = evaluate_classification_metrics(y_true, y_preds, positive_label)
+        tpr.append(dict_metrics["Recall"])  # Sensibilidad
+        fpr.append(1 - dict_metrics["Specificity"])  # 1 - Especificidad
+
+    print("Min prob:", np.min(y_probs))
+    print("Max prob:", np.max(y_probs))
+
+
+    plt.figure(figsize=(6,6))
+    plt.plot(fpr, tpr, marker='o', linestyle='--', color='blue', label='ROC Curve')
+    plt.plot([0,1], [0,1], linestyle='--', color='gray', label='Random Classifier')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend()
+    plt.show(block=True)
 
     return {"fpr": np.array(fpr), "tpr": np.array(tpr)}
