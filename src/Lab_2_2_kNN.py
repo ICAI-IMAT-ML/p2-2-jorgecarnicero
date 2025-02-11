@@ -344,12 +344,20 @@ def plot_calibration_curve(y_true, y_probs, positive_label, n_bins=10):
         bin_siguiente = bins[i+1]
 
         # Seleccionamos los índices de las muestras cuya probabilidad cae en el bin actual.
-        indices = (y_probs >= bin_siguiente) & (y_probs < bin_anterior)
+        indices = (y_probs >= bin_anterior) & (y_probs < bin_siguiente)
 
         y_preds = [1 if t == positive_label else 0 for t in y_true[indices]]
-        fraction = np.sum(y_preds) / len(y_preds)
+        if len(y_preds) > 0:
+            fraction = np.sum(y_preds) / len(y_preds)
+        else:
+            fraction = 0 # O algún valor que indique que no hay datos en este bin
         
         true_proportions.append(fraction)
+
+    plt.figure(figsize=(6, 6))
+    plt.plot(bin_centers, true_proportions, marker='o', label='Calibration Curve')
+    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Perfectly Calibrated')
+    plt.show()
 
     return {"bin_centers": np.array(bin_centers), "true_proportions": np.array(true_proportions)}
 
@@ -381,7 +389,18 @@ def plot_probability_histograms(y_true, y_probs, positive_label, n_bins=10):
     """
     # TODO
     y_true_mapped = np.array([1 if label == positive_label else 0 for label in y_true])
+    y_probs = np.array(y_probs)  # Ensure y_probs is a NumPy array
     
+    positive_probs = y_probs[y_true_mapped == 1]
+    negative_probs = y_probs[y_true_mapped == 0]
+    
+    plt.figure(figsize=(8, 6))
+    plt.hist(positive_probs, bins=n_bins, alpha=0.6, color='blue', label='Positive Class', edgecolor='black')
+    plt.hist(negative_probs, bins=n_bins, alpha=0.6, color='red', label='Negative Class', edgecolor='black')
+    plt.title('Probability Histograms')
+    plt.show()
+
+
     return {
         "array_passed_to_histogram_of_positive_class": y_probs[y_true_mapped == 1],
         "array_passed_to_histogram_of_negative_class": y_probs[y_true_mapped == 0],
@@ -425,4 +444,9 @@ def plot_roc_curve(y_true, y_probs, positive_label):
         tpr.append(dictt["Recall"])
         fpr.append(1 - dictt["Specificity"])
     
+    plt.figure(figsize=(6, 6))
+    plt.plot(fpr, tpr, marker='o', linestyle='-', color='blue', label='ROC Curve')
+    plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Random Classifier')
+    plt.show()
+
     return {"fpr": np.array(fpr), "tpr": np.array(tpr)}
